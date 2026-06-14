@@ -9,12 +9,9 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
-import java.util.Random;
-
 public class DieStart extends Application {
 
-    private int value = 1;
-    private final Random random = new Random();
+    Die die = new Die();
 
     public static void main(String[] args) {
         launch(args);
@@ -25,47 +22,39 @@ public class DieStart extends Application {
         Canvas canvas = new Canvas(200, 200);
         GraphicsContext gc = canvas.getGraphicsContext2D();
 
-        drawDie(gc);
+        drawDie(gc, die);
 
-        // Handle click
         canvas.addEventHandler(MouseEvent.MOUSE_CLICKED, e -> {
-            value = random.nextInt(6) + 1;
-            drawDie(gc);
-            System.out.println("Rolled: " + value);
+            die.roll();
+            drawDie(gc, die);
         });
 
         StackPane root = new StackPane(canvas);
         Scene scene = new Scene(root, 220, 220);
-
         stage.setTitle("JavaFX Die");
         stage.setScene(scene);
         stage.show();
     }
 
-    private void drawDie(GraphicsContext gc) {
+    void drawDie(GraphicsContext gc, Die die) {
         double size = 150;
         double x = 25;
         double y = 25;
 
-        // Clear
         gc.setFill(Color.WHITE);
         gc.fillRect(0, 0, 200, 200);
-
-        // Draw die background
         gc.setFill(Color.WHITE);
         gc.fillRoundRect(x, y, size, size, 20, 20);
-
         gc.setStroke(Color.BLACK);
+        gc.setLineWidth(2);
         gc.strokeRoundRect(x, y, size, size, 20, 20);
 
-        // Dot positions
         double cx = x + size / 2;
         double cy = y + size / 2;
         double offset = size / 4;
 
         gc.setFill(Color.BLACK);
-
-        switch (value) {
+        switch (die.getValue()) {
             case 1 -> dot(gc, cx, cy);
             case 2 -> {
                 dot(gc, cx - offset, cy - offset);
@@ -100,8 +89,9 @@ public class DieStart extends Application {
         }
     }
 
-    private void dot(GraphicsContext gc, double x, double y) {
+    void dot(GraphicsContext gc, double x, double y) {
         double r = 8;
         gc.fillOval(x - r, y - r, r * 2, r * 2);
     }
 }
+
