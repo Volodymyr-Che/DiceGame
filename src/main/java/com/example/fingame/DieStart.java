@@ -1,17 +1,20 @@
 package com.example.fingame;
 
 import javafx.application.Application;
+import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.StackPane;
+import javafx.scene.control.Button;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 public class DieStart extends Application {
 
-    Die die = new Die();
+    Table table = new Table();
+    Canvas[] dieCanvases = new Canvas[6];
 
     public static void main(String[] args) {
         launch(args);
@@ -19,35 +22,43 @@ public class DieStart extends Application {
 
     @Override
     public void start(Stage stage) {
-        Canvas canvas = new Canvas(200, 200);
-        GraphicsContext gc = canvas.getGraphicsContext2D();
+        HBox diceRow = new HBox(8);
+        diceRow.setPadding(new Insets(10));
 
-        drawDie(gc, die);
+        for (int i = 0; i < 6; i++) {
+            dieCanvases[i] = new Canvas(100, 100);
+            drawDie(dieCanvases[i].getGraphicsContext2D(), table.getDice().get(i));
+            diceRow.getChildren().add(dieCanvases[i]);
+        }
 
-        canvas.addEventHandler(MouseEvent.MOUSE_CLICKED, e -> {
-            die.roll();
-            drawDie(gc, die);
+        Button rollButton = new Button("Roll");
+        rollButton.setOnAction(e -> {
+            table.roll();
+            for (int i = 0; i < 6; i++) {
+                drawDie(dieCanvases[i].getGraphicsContext2D(), table.getDice().get(i));
+            }
         });
 
-        StackPane root = new StackPane(canvas);
-        Scene scene = new Scene(root, 220, 220);
-        stage.setTitle("JavaFX Die");
+        VBox root = new VBox(10, diceRow, rollButton);
+        root.setPadding(new Insets(10));
+        Scene scene = new Scene(root, 700, 180);
+        stage.setTitle("Farkle");
         stage.setScene(scene);
         stage.show();
     }
 
     void drawDie(GraphicsContext gc, Die die) {
-        double size = 150;
-        double x = 25;
-        double y = 25;
+        double size = 90;
+        double x = 5;
+        double y = 5;
 
         gc.setFill(Color.WHITE);
-        gc.fillRect(0, 0, 200, 200);
+        gc.fillRect(0, 0, 100, 100);
         gc.setFill(Color.WHITE);
-        gc.fillRoundRect(x, y, size, size, 20, 20);
+        gc.fillRect(x, y, size, size);  // Changed from fillRoundRect
         gc.setStroke(Color.BLACK);
         gc.setLineWidth(2);
-        gc.strokeRoundRect(x, y, size, size, 20, 20);
+        gc.strokeRect(x, y, size, size);  // Changed from strokeRoundRect
 
         double cx = x + size / 2;
         double cy = y + size / 2;
@@ -94,4 +105,3 @@ public class DieStart extends Application {
         gc.fillOval(x - r, y - r, r * 2, r * 2);
     }
 }
-
