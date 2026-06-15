@@ -9,7 +9,7 @@ public class GameController {
     ScoreCalculator scorer;
     int totalScore;
     String playerName;
-    int winTarget = 10000;
+    int winTarget = 2000;
 
     public GameController(String playerName) {
         this.playerName = playerName;

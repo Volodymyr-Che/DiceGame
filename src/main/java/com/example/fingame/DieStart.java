@@ -7,6 +7,7 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -24,6 +25,9 @@ public class DieStart extends Application {
     Button rollButton = new Button("Roll");
     Button bankButton = new Button("Bank Score");
 
+    HBox tableRow = new HBox(8);
+    HBox heldRow  = new HBox(8);
+
     public static void main(String[] args) {
         launch(args);
     }
@@ -34,25 +38,33 @@ public class DieStart extends Application {
         rollButton.setOnAction(e -> handleRoll());
         bankButton.setOnAction(e -> handleBank());
 
-        HBox diceRow = new HBox(8);
-        diceRow.setPadding(new Insets(10));
-
         for (int i = 0; i < 6; i++) {
             dieCanvases[i] = new Canvas(100, 100);
-            drawDie(dieCanvases[i].getGraphicsContext2D(), game.getTable().getDice().get(i));
-            diceRow.getChildren().add(dieCanvases[i]);
+            final int dieIndex = i;
+            dieCanvases[i].addEventHandler(MouseEvent.MOUSE_CLICKED, ev -> clickDie(dieIndex));
         }
+
+        tableRow.setPadding(new Insets(8));
+        tableRow.setMinHeight(120);
+        tableRow.getChildren().add(new Label("Rolled dice appear here"));
+
+        heldRow.setPadding(new Insets(8));
+        heldRow.setMinHeight(120);
+        heldRow.getChildren().add(new Label("Held dice appear here"));
 
         HBox topBar = new HBox(20, scoreLabel, turnLabel);
         topBar.setPadding(new Insets(6));
 
+        Label tableTitle = new Label("Table");
+        Label heldTitle  = new Label("Held");
+
         HBox buttonRow = new HBox(10, rollButton, bankButton);
         buttonRow.setPadding(new Insets(6));
 
-        VBox root = new VBox(8, topBar, diceRow, buttonRow, statusLabel);
+        VBox root = new VBox(8, topBar, tableTitle, tableRow, heldTitle, heldRow, buttonRow, statusLabel);
         root.setPadding(new Insets(12));
 
-        Scene scene = new Scene(root, 700, 280);
+        Scene scene = new Scene(root, 700, 420);
         stage.setTitle("Farkle");
         stage.setScene(scene);
         stage.show();
@@ -60,15 +72,26 @@ public class DieStart extends Application {
 
     void handleRoll() {
         game.rollDice();
+
+        tableRow.getChildren().clear();
         for (int i = 0; i < 6; i++) {
-            drawDie(dieCanvases[i].getGraphicsContext2D(), game.getTable().getDice().get(i));
+            Die currentDie = game.getTable().getDice().get(i);
+            if (!currentDie.isHeld()) {
+                drawDie(dieCanvases[i].getGraphicsContext2D(), currentDie);
+                tableRow.getChildren().add(dieCanvases[i]);
+            }
+        }
+
+        if (tableRow.getChildren().isEmpty()) {
+            tableRow.getChildren().add(new Label("No dice left"));
         }
 
         if (game.isFarkle()) {
             game.handleFarkle();
-            for (int i = 0; i < 6; i++) {
-                drawDie(dieCanvases[i].getGraphicsContext2D(), game.getTable().getDice().get(i));
-            }
+            tableRow.getChildren().clear();
+            heldRow.getChildren().clear();
+            tableRow.getChildren().add(new Label("Rolled dice appear here"));
+            heldRow.getChildren().add(new Label("Held dice appear here"));
             turnLabel.setText("Turn: 0");
             statusLabel.setText("Farkle! Turn lost.");
             bankButton.setDisable(true);
@@ -81,9 +104,12 @@ public class DieStart extends Application {
     void handleBank() {
         game.scoreDice();
         game.bankAndEndTurn();
-        for (int i = 0; i < 6; i++) {
-            drawDie(dieCanvases[i].getGraphicsContext2D(), game.getTable().getDice().get(i));
-        }
+
+        tableRow.getChildren().clear();
+        heldRow.getChildren().clear();
+        tableRow.getChildren().add(new Label("Rolled dice appear here"));
+        heldRow.getChildren().add(new Label("Held dice appear here"));
+
         scoreLabel.setText("Score: " + game.getScore());
         turnLabel.setText("Turn: 0");
         bankButton.setDisable(true);
@@ -96,6 +122,47 @@ public class DieStart extends Application {
         }
     }
 
+    void clickDie(int dieIndex) {
+        Die clickedDie = game.getTable().getDice().get(dieIndex);
+
+        if (clickedDie.isHeld()) {
+            clickedDie.setHeld(false);
+            drawDie(dieCanvases[dieIndex].getGraphicsContext2D(), clickedDie);
+            heldRow.getChildren().remove(dieCanvases[dieIndex]);
+            tableRow.getChildren().add(dieCanvases[dieIndex]);
+            if (heldRow.getChildren().isEmpty()) {
+                heldRow.getChildren().add(new Label("Held dice appear here"));
+            }
+            turnLabel.setText("Turn: " + game.getBank().getScore());
+            statusLabel.setText("Unheld.");
+            return;
+        }
+
+        if (game.dieIsUseless(clickedDie)) {
+            statusLabel.setText(clickedDie.getValue() + " is not a member of any melds");
+            return;
+        }
+
+        clickedDie.setHeld(true);
+        drawDie(dieCanvases[dieIndex].getGraphicsContext2D(), clickedDie);
+        tableRow.getChildren().remove(dieCanvases[dieIndex]);
+
+        if (tableRow.getChildren().isEmpty()) {
+            tableRow.getChildren().add(new Label("No dice left"));
+        }
+
+        for (int i = heldRow.getChildren().size() - 1; i >= 0; i--) {
+            if (heldRow.getChildren().get(i) instanceof Label) {
+                heldRow.getChildren().remove(i);
+                break;
+            }
+        }
+        heldRow.getChildren().add(dieCanvases[dieIndex]);
+
+        turnLabel.setText("Turn: " + game.getBank().getScore());
+        statusLabel.setText("Held. Keep holding or bank.");
+    }
+
     void drawDie(GraphicsContext gc, Die die) {
         double size = 90;
         double x = 5;
@@ -103,10 +170,17 @@ public class DieStart extends Application {
 
         gc.setFill(Color.WHITE);
         gc.fillRect(0, 0, 100, 100);
-        gc.setFill(Color.WHITE);
-        gc.fillRect(x, y, size, size);
-        gc.setStroke(Color.BLACK);
+
+        Color faceColor = Color.WHITE;
+        Color borderColor = Color.BLACK;
+        if (die.isHeld()) {
+            faceColor = Color.LIGHTBLUE;
+            borderColor = Color.STEELBLUE;
+        }
+        gc.setFill(faceColor);
+        gc.setStroke(borderColor);
         gc.setLineWidth(2);
+        gc.fillRect(x, y, size, size);
         gc.strokeRect(x, y, size, size);
 
         double cx = x + size / 2;
