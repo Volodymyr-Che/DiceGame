@@ -22,6 +22,7 @@ public class DieStart extends Application {
     Label statusLabel = new Label("Press Roll to begin");
 
     Button rollButton = new Button("Roll");
+    Button bankButton = new Button("Bank Score");
 
     public static void main(String[] args) {
         launch(args);
@@ -29,7 +30,9 @@ public class DieStart extends Application {
 
     @Override
     public void start(Stage stage) {
+        bankButton.setDisable(true);
         rollButton.setOnAction(e -> handleRoll());
+        bankButton.setOnAction(e -> handleBank());
 
         HBox diceRow = new HBox(8);
         diceRow.setPadding(new Insets(10));
@@ -43,10 +46,13 @@ public class DieStart extends Application {
         HBox topBar = new HBox(20, scoreLabel, turnLabel);
         topBar.setPadding(new Insets(6));
 
-        VBox root = new VBox(8, topBar, diceRow, rollButton, statusLabel);
+        HBox buttonRow = new HBox(10, rollButton, bankButton);
+        buttonRow.setPadding(new Insets(6));
+
+        VBox root = new VBox(8, topBar, diceRow, buttonRow, statusLabel);
         root.setPadding(new Insets(12));
 
-        Scene scene = new Scene(root, 700, 260);
+        Scene scene = new Scene(root, 700, 280);
         stage.setTitle("Farkle");
         stage.setScene(scene);
         stage.show();
@@ -65,8 +71,28 @@ public class DieStart extends Application {
             }
             turnLabel.setText("Turn: 0");
             statusLabel.setText("Farkle! Turn lost.");
+            bankButton.setDisable(true);
         } else {
             statusLabel.setText("Click a die to hold it");
+            bankButton.setDisable(false);
+        }
+    }
+
+    void handleBank() {
+        game.scoreDice();
+        game.bankAndEndTurn();
+        for (int i = 0; i < 6; i++) {
+            drawDie(dieCanvases[i].getGraphicsContext2D(), game.getTable().getDice().get(i));
+        }
+        scoreLabel.setText("Score: " + game.getScore());
+        turnLabel.setText("Turn: 0");
+        bankButton.setDisable(true);
+
+        if (game.isGameOver()) {
+            statusLabel.setText("You win! Final score: " + game.getScore());
+            rollButton.setDisable(true);
+        } else {
+            statusLabel.setText("Banked. Roll again!");
         }
     }
 
